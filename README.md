@@ -5,7 +5,7 @@ Dockerさえ入っていれば動くはずです！
 
 1. `git clone https://github.com/Hibagon1go/react_native_expo_docker_sample.git`
 2. `cd react_native_expo_docker_sample`
-3. `make expo_sample`
+3. `make english_app`
 4. `expo init your_app_name`
 5. `cd your_app_name`
 6. `expo start`

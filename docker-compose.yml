@@ -1,7 +1,7 @@
 version: "3"
 services:
-  expo_sample:
-    container_name: expo_sample
+  english_app:
+    container_name: english_app
     tty: true
     build: .
     volumes:
