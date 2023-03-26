@@ -12,9 +12,11 @@ import { Audio } from 'expo-av'
 
 import { ENGLISH_DATA } from '../constants'
 
-type setListen = {
-  ja: string,
-  en: string,
+type EnglishData = {
+  id?: string,
+  ja?: string,
+  en?: string,
+  img?: string
 }
 
 
@@ -22,17 +24,16 @@ function ListenContent() {
   const [jpLanguage, setJpLanguage] = useState<string>()
   const [enLanguage, setEnLanguage] = useState<string>()
 
-  const [action, setAction] = useState(false)
-
   const isStopped = useRef(true)
   const resumeFrom = useRef('start')
-  const isLooping = useRef(false)
+
+  const isListen = useRef<EnglishData>()
 
   let opacity = useRef(new Animated.Value(0)).current
   let opacityImg = useRef(new Animated.Value(1)).current
   let opacityAnswer = useRef(new Animated.Value(0)).current
 
-  let loopInterval: number
+  let loopInterval = useRef<boolean>(true)
 
   let interOpacity = opacityImg.interpolate({
     inputRange: [0, 150, 300],
@@ -41,16 +42,14 @@ function ListenContent() {
 
   const sleep = (seconds: number) => new Promise(resolve => setTimeout(resolve, seconds * 1000))
 
-  useEffect(() => {
-    if (action) {
-      actionListen()
-    } else {
-      clearTimeout(loopInterval)
-    }
-  }, [action])
-
-  // const actionNumber = Math.floor(Math.random() * 4)
-  // const setListen = ENGLISH_DATA[actionNumber]
+  // useEffect(() => {
+  //   if (action) {
+  //     actionListen()
+  //   } else {
+  //     clearTimeout(loopInterval)
+  //   }
+  // }, [action])
+  
   // useEffect(() => {
   //   let isMounted = true
   //   if (isMounted && action) {
@@ -77,124 +76,104 @@ function ListenContent() {
     }
   }
 
-  const jaListen = async (setListen: setListen) => {
-    let text: string = ''
-    text = setListen['ja']
+  function jaListen (setListen: EnglishData, reStart: boolean = false) {
+    let text: string | undefined = ''
+    resumeFrom.current = 'jaListen'
+    text = setListen?.ja
     setJpLanguage(text)
-    Speech.speak(text, { language: 'ja', rate: 1.0, pitch: 1.0 });
-    (() => {
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }).start()
-    })()
+    return new Promise((resolve, reject) => {
+      try {
+        if (text && !reStart) Speech.speak(text, { language: 'ja', rate: 1.0, pitch: 1.0 });
+        (() => {
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }).start()
+        })()
+        resolve('jaListen')
+      } catch (e) {
+        reject(e)
+      }
+    })
   }
 
-  const enListen = async (setListen: setListen) => {
-    let text: string = ''
-    text = setListen['en']
+  function enListen(setListen: EnglishData, reStart: boolean = false) {
+    let text: string | undefined = ''
+    resumeFrom.current = 'enListen'
+    text = setListen?.en
     setEnLanguage(text)
-    Speech.speak(text, { language: 'en', rate: 1.0, pitch: 1.0 });
-    (() => {
-      Animated.timing(opacityAnswer, {
-        toValue: 1,
-        duration: 1000,
-        useNativeDriver: true,
-      }).start()
-    })()
+    return new Promise((resolve) => {
+      if (text && !reStart) Speech.speak(text, { language: 'en', rate: 1.0, pitch: 1.0 });
+      (() => {
+        Animated.timing(opacityAnswer, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }).start()
+      })()
+      resolve('enListen')
+    })
   }
 
   async function actionListen() {
-    if (isStopped.current || isLooping.current) return
-    const actionNumber = Math.floor(Math.random() * 4)
-    const setListen = ENGLISH_DATA[actionNumber]
+    let actionNumber: number = 0
+    let setListen: EnglishData = {}
 
-    isLooping.current = true;
+    actionNumber = Math.floor(Math.random() * 4)
+    setListen = ENGLISH_DATA[actionNumber]
 
-    if (resumeFrom.current === 'start') {
-      await question(setListen)
-    } else if (resumeFrom.current === 'jaListen') {
-      await jaListen(setListen)
-      await sleep(5)
-      if (isStopped.current) {
-        resumeFrom.current = 'enListen'
-        isLooping.current = false
-      }
-      await enListen(setListen)
-    } else if (resumeFrom.current === 'enListen') {
-      await enListen(setListen)
-    }
+    isListen.current = setListen
 
-    clearTimeout(loopInterval)
-    loopInterval = window.setTimeout(() => {
-      resumeFrom.current = 'start'
-      isLooping.current = false
-      actionListen()
-    }, 5000)
+    await question(setListen)
+
+    if (!isStopped.current === false) return 
+    console.log('最初の処理終わり')
+
+    await sleep(5)
+    resumeFrom.current = 'start'
+
+    if (!isStopped.current) actionListen()
   }
   
-  async function question(setListen: setListen): Promise<void> {
+  async function question(setListen: EnglishData): Promise<void | string> {
+    async function executeSteps(steps: (() => Promise<void | unknown>)[]) {
+      for (const step of steps) {
+        await new Promise((resolve) => {
+          const checkAction = setInterval(() => {
+            if (!isStopped.current) {
+              clearInterval(checkAction)
+              loopInterval.current = false
+              resolve(null)
+            }
+          }, 100)
+        })
+        await step()
+      }
+    }
+
     opacityImg.setValue(1)
     opacity.setValue(0)
     opacityAnswer.setValue(0)
 
     setJpLanguage('')
     setEnLanguage('')
-    await firstSound()
-    await sleep(2)
-    if (isStopped.current) {
-      resumeFrom.current = 'jaListen'
-      return
-    }
-    await jaListen(setListen)
-    await sleep(5)
-    if (isStopped.current) {
-      resumeFrom.current = 'enListen'
-      return;
-    }
-    await enListen(setListen)
+    
+    await executeSteps([
+      firstSound,
+      () => sleep(2),
+      () => jaListen(setListen),
+      () => sleep(5),
+      () => enListen(setListen),
+    ])
   }
-  //   async function executeSteps(steps: (() => Promise<void | unknown>)[]) {
-  //     for (const step of steps) {
-  //       if (isStopped.current) {
-  //         await new Promise((resolve) => {
-  //           const checkAction = setInterval(() => {
-  //             if (isStopped.current) {
-  //               clearInterval(checkAction)
-  //               resolve(null)
-  //             }
-  //           }, 100)
-  //         })
-  //       }
-  //       await step()
-  //     }
-  //   }
-
-  //   while (isStopped.current) {
-  //     opacityImg.setValue(1)
-  //     opacity.setValue(0)
-  //     opacityAnswer.setValue(0)
-
-  //     setJpLanguage('')
-  //     setEnLanguage('')
-
-  //     await executeSteps([
-  //       firstSound,
-  //       () => sleep(2),
-  //       () => jaListen(setListen),
-  //       () => sleep(5),
-  //       () => enListen(setListen),
-  //     ])
-  //   }
-  // }
-  // }
 
   async function switchListen() {
     isStopped.current = !isStopped.current
-    if (!isStopped.current) {
-      clearTimeout(loopInterval)
+    if (!isStopped.current && loopInterval.current) {
       actionListen()
+    } else {
+      Speech.stop()
     }
   }
 
