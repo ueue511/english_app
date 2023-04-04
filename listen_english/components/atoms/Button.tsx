@@ -1,3 +1,4 @@
+import React from 'react'
 import {
   Text,
   StyleSheet,
@@ -8,17 +9,19 @@ import {
 type Props = {
   text: string,
   justifyContent: "flex-start" | "flex-end" | "center" | "space-between" | "space-around" | "space-evenly" | undefined,
-  route: () => void
+  route: () => void,
+  reset?: boolean
 }
 
 function Button(props: Props) {
-  const { text, justifyContent, route } = props
+  const { text, justifyContent, route, reset } = props
   
   const styles = StyleSheet.create({
     buttonContent: {
       borderRightRadius: 20,
       flex: 1,
       justifyContent: justifyContent,
+      display: reset? 'none' : 'flex' 
     },
     button: {
       alignSelf: 'center',

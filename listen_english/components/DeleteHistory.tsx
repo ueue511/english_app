@@ -1,9 +1,11 @@
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
   View
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import Button from './atoms/Button' 
 
 interface navigationProps {
@@ -14,18 +16,32 @@ interface navigationProps {
 
 function DeleteHIstory() {
   const navigation = useNavigation<navigationProps>()
+  const [caveatText, setCaveatText] = useState<string>(`今まで聞いた英語の記録が消えますが、いいですか？`)
+  const [reset, setReset] = useState<boolean>(false)
+
+  const sleep = (seconds: number) => new Promise(resolve => setTimeout(resolve, seconds * 1000))
+
+  const clearAll = async ()=>  {
+    try {
+      await AsyncStorage.clear()
+      setReset(true)
+      setCaveatText(`リセットしました。top画面に戻ります。`)
+      await sleep(5)
+      navigation.navigate('top')
+    } catch (e) {
+      // clear error
+    }
+  }
   return (
     <View style={styles.DeleteContent}>
       <Text style={styles.text}>
-        今まで聞いた
-        英語の記録が
-        消えますが、
-        いいですか？
+        {caveatText}
       </Text>
       <Button
         text={'リセット'}
         justifyContent={'flex-start'}
-        route={() => navigation.navigate('top')}
+        route={clearAll}
+        reset={reset}
       />
     </View>
   )

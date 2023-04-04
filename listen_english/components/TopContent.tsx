@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   StyleSheet,
   View,
@@ -31,8 +32,8 @@ const styles = StyleSheet.create({
   topContent: {
     backgroundColor: 'fff',
     borderColor: '#A5CFCF',
-    borderTopLeftRadius: 65,
-    borderTopRightRadius: 65,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
     borderWidth: 10,
     flex: 1,
     marginTop: '5%',

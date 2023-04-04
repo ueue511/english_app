@@ -3,14 +3,18 @@ import {
   Animated,
   Image,
   ImageBackground,
+  ImageSourcePropType,
   StyleSheet,
   TouchableOpacity,
   Text,
 } from 'react-native'
 import * as Speech from 'expo-speech'
 import { Audio } from 'expo-av'
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { ENGLISH_DATA } from '../constants'
+import { ING_PATH } from '../constants'
 
 type EnglishData = {
   id?: string,
@@ -19,16 +23,29 @@ type EnglishData = {
   img?: string
 }
 
+type ImgPath = Record<string, ImageSourcePropType>
 
-function ListenContent() {
+type RootParamList = {
+  top: undefined;
+  deleteHistory: undefined
+  history: { key: string };
+};
+
+function ListenContent(props: {isStop: boolean}) {
+  const { isStop } = props
+  const navigation = useNavigation()
+  const route = useRoute<RouteProp<RootParamList, 'history'>>()
+
+  const routeParams: string | undefined = route.params?.key
+
   const [jpLanguage, setJpLanguage] = useState<string>()
   const [enLanguage, setEnLanguage] = useState<string>()
+  const [languageImg, setLanguageImg] = useState<ImageSourcePropType>(require('../assets/start.png'))
 
   const isStopped = useRef(true)
   const resumeFrom = useRef('start')
 
   const isListen = useRef<EnglishData>()
-
   let opacity = useRef(new Animated.Value(0)).current
   let opacityImg = useRef(new Animated.Value(1)).current
   let opacityAnswer = useRef(new Animated.Value(0)).current
@@ -42,23 +59,20 @@ function ListenContent() {
 
   const sleep = (seconds: number) => new Promise(resolve => setTimeout(resolve, seconds * 1000))
 
-  // useEffect(() => {
-  //   if (action) {
-  //     actionListen()
-  //   } else {
-  //     clearTimeout(loopInterval)
-  //   }
-  // }, [action])
-  
-  // useEffect(() => {
-  //   let isMounted = true
-  //   if (isMounted && action) {
-  //     question(setListen)
-  //   }
-  //   return () => {
-  //     isMounted = false
-  //   };
-  // }, [action])
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      isStopped.current = true
+    })
+    // クリーンアップ関数を返す
+    return unsubscribe
+  }, [navigation])
+
+  useEffect(() => {
+    if (routeParams !== undefined) {
+      isStopped.current = !isStopped.current
+      actionListen()
+    }
+  }, [])
 
   const firstSound = async () => {
     Animated.timing(opacityImg, {
@@ -98,6 +112,27 @@ function ListenContent() {
     })
   }
 
+  async function storeData(dataArray: Array<string>, valueNumber: number): Promise<void> {
+    dataArray.push(valueNumber.toString())
+    let value: string = dataArray.join(',')
+    try {
+      await AsyncStorage.setItem('history', value)
+    } catch (e) {
+      // saving error
+    }
+  }
+
+  async function getData(): Promise<Array<string> | undefined> {
+    try {
+      const value: string | null = await AsyncStorage.getItem('history')
+      if (value !== null) {
+        return value.split(',')
+      }
+    } catch (err) {
+      return undefined
+    }
+  }
+
   function enListen(setListen: EnglishData, reStart: boolean = false) {
     let text: string | undefined = ''
     resumeFrom.current = 'enListen'
@@ -117,23 +152,39 @@ function ListenContent() {
   }
 
   async function actionListen() {
-    let actionNumber: number = 0
+    let actionNumber: number
     let setListen: EnglishData = {}
 
-    actionNumber = Math.floor(Math.random() * 4)
+    let historyData = await getData() || []
+
+    console.log(`161: ${routeParams}`)
+
+    async function getActionNumber(historyData: string[]): Promise<number> {
+      let num: number
+      if (routeParams !== undefined) {
+        num = ENGLISH_DATA.findIndex((u) => u.id === routeParams)
+      } else {
+        do {
+          num = Math.floor(Math.random() * ENGLISH_DATA.length)
+        } while (historyData.includes(num.toString()))
+      }
+      return num
+    }
+
+    actionNumber = await getActionNumber(historyData)
+
     setListen = ENGLISH_DATA[actionNumber]
+    let imgPath: ImgPath = ING_PATH
+
+    if (setListen.img) setLanguageImg(imgPath[setListen.img])
+
+    if (routeParams === undefined) storeData(historyData, actionNumber)
 
     isListen.current = setListen
-
     await question(setListen)
+    console.log('一連の処理終わり')
 
-    if (!isStopped.current === false) return 
-    console.log('最初の処理終わり')
-
-    await sleep(5)
-    resumeFrom.current = 'start'
-
-    if (!isStopped.current) actionListen()
+    if (!isStopped.current && routeParams === undefined) actionListen()
   }
   
   async function question(setListen: EnglishData): Promise<void | string> {
@@ -146,7 +197,7 @@ function ListenContent() {
               loopInterval.current = false
               resolve(null)
             }
-          }, 100)
+          }, 500)
         })
         await step()
       }
@@ -161,11 +212,13 @@ function ListenContent() {
     
     await executeSteps([
       firstSound,
-      () => sleep(2),
+      () => sleep(1),
       () => jaListen(setListen),
-      () => sleep(5),
+      () => sleep(4),
       () => enListen(setListen),
+      () => sleep(4)
     ])
+    loopInterval.current = true
   }
 
   async function switchListen() {
@@ -181,11 +234,11 @@ function ListenContent() {
     <TouchableOpacity style={styles.listenContent} onPress={switchListen}>
       <Image
         style={styles.headerImg}
-        source={require(`../assets/01.jpg`)}
+        source={languageImg}
       />
       <Animated.View style={{ opacity: interOpacity }}>
         <ImageBackground
-          source={require(`../assets/icon_1.jpg`)}
+          source={require('../assets/icon_1.jpg')}
           resizeMode="contain"
           style={styles.textBox}
         >
@@ -197,7 +250,7 @@ function ListenContent() {
         </ImageBackground>
       </Animated.View>
       <ImageBackground
-        source={require(`../assets/icon_2.jpg`)}
+        source={require('../assets/icon_2.jpg')}
         resizeMode="contain"
         style={styles.textBox}
       >
@@ -219,7 +272,7 @@ const styles = StyleSheet.create({
   },
   headerImg: {
     alignItems: 'center',
-    width: '95%',
+    width: '100%',
     resizeMode: 'contain'
   },
   textBox: {
@@ -231,5 +284,48 @@ const styles = StyleSheet.create({
     fontSize: 42,
     fontWeight: 'bold',
     textAlign: 'center'
+  },
+
+  centeredView: {
+    alignItems: 'center',
+    backgroundColor: '#000',
+    flex: 1,
+    justifyContent: 'center',
+    opacity: 0.5
+  },
+  modalView: {
+    margin: 20,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 35,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button: {
+    borderRadius: 20,
+    padding: 10,
+    elevation: 2,
+  },
+  buttonOpen: {
+    backgroundColor: '#F194FF',
+  },
+  buttonClose: {
+    backgroundColor: '#2196F3',
+  },
+  textStyle: {
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  modalText: {
+    marginBottom: 15,
+    textAlign: 'center',
   },
 })

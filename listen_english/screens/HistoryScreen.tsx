@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
+  ActivityIndicator,
   FlatList,
   Platform,
   StatusBar,
@@ -10,6 +11,8 @@ import Title from '../components/atoms/Title'
 
 import HistoryContent from '../components/HistoryContent'
 import NaveTabu from '../components/module/NaveTabu'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 import { ENGLISH_DATA } from '../constants'
 
 type EnglishData = {
@@ -20,36 +23,64 @@ type EnglishData = {
 }
 
 function HistoryScreen() {
+  const [animating, setAnimating] = useState<boolean>()
   const [historyList, setHistoryList] = useState<EnglishData[]>([])
 
-  const listHistory: number[] = [0, 1, 2, 3, 4, 5]
+  const getData = useCallback(async () => {
+    setHistoryList([])
+      try {
+        const value: string | null = await AsyncStorage.getItem('history')
+        if (value !== null) {
+          let arrayValue = value.split(',')
+          let keyNum: number | null = null
+          setHistoryList((historyList) => {
+            arrayValue.forEach((listenNum) => {
+              keyNum = parseInt(listenNum);
+              if (keyNum !== null) {
+                let list = ENGLISH_DATA[keyNum]
+                historyList.push(list)
+              }
+            });
+            return [...historyList]
+          });
+        }
+        setAnimating(false)
+        return 'getData'
+      } catch (err) {
+        console.log(err) 
+      }
+    // })
+  }, [setHistoryList])
 
   useEffect(() => {
-    // TODO この判定で正しいのか？
-    if (historyList.length < 1) {
-      listHistory.forEach((key) => {
-        getHistory(key)
-      })
-    }
-  }, [])
+    (async () => {
+      setAnimating(true)
+      await getData()
+    })()
+  }, [getData])
 
-  function getHistory(key: number): void {
-    let list = ENGLISH_DATA[key]
-    setHistoryList((historyList) => [...historyList, list])
-  }
   return (
     <View style={styles.container}>
       <Title />
-      <FlatList
-        data={historyList}
-        renderItem={({ item }) => (
-          <HistoryContent
-            jp={item.ja}
-            en={item.en}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-      />
+      <View style={styles.historyContent}>
+        <ActivityIndicator
+          animating={animating}
+          color='#A5CFCF'
+          size="large"
+          style={styles.loading}
+        />
+        <FlatList
+          data={historyList}
+          renderItem={({ item }) => (
+            <HistoryContent
+              jp={item.ja}
+              en={item.en}
+              id={item.id}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+        />
+      </View>
       <NaveTabu
         routeNameLeft={'deleteHistory'}
         routeNameRight={'top'}
@@ -62,11 +93,18 @@ export default HistoryScreen
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
     alignItems: 'center',
+    backgroundColor: '#fff',
+    flex: 1,
     justifyContent: 'flex-start',
     // androidの高さ調整
     paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
+  historyContent: {
+    flex: 0.86
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'flex-end',
   }
 })

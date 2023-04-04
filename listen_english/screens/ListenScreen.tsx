@@ -1,23 +1,37 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   Platform,
   StatusBar,
   StyleSheet,
-  Text,
-  View,
+  TouchableOpacity,
 } from 'react-native'
+import { Icon, Overlay } from '@rneui/themed'
 import ListenContent from '../components/ListenContent'
 import NaveTabu from '../components/module/NaveTabu'
 
 function ListenScreen() {
+  const [isStop, setIsStop] = useState(true)
   return (
-    <View style={styles.container}>
-      <ListenContent />
+    <TouchableOpacity style={styles.container} onPress={() => setIsStop(true)}>
+      <ListenContent
+        isStop={isStop}
+      />
       <NaveTabu
         routeNameLeft={'top'}
         routeNameRight={'history'}
       />
-    </View>
+      <Overlay
+        isVisible={isStop}
+        onBackdropPress={() => setIsStop(false)}
+      >
+        <Icon
+          color="#A5CFCF"
+          name="play"
+          size={100}
+          type="material-community"
+        />
+      </Overlay>
+    </TouchableOpacity>
   )
 }
 
