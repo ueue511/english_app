@@ -1,4 +1,10 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle
+} from 'react'
 import {
   Animated,
   Image,
@@ -28,11 +34,18 @@ type ImgPath = Record<string, ImageSourcePropType>
 type RootParamList = {
   top: undefined;
   deleteHistory: undefined
-  history: { key: string };
-};
+  history: { key: string }
+}
 
-function ListenContent(props: {isStop: boolean}) {
-  const { isStop } = props
+
+export interface ListenContentProps {
+  showModal: () => void
+}
+export interface ListenContentMethods {
+  switchFunc: () => void
+}
+
+const ListenContent = forwardRef<ListenContentMethods, ListenContentProps>(({ showModal }, ref) => {
   const navigation = useNavigation()
   const route = useRoute<RouteProp<RootParamList, 'history'>>()
 
@@ -66,13 +79,14 @@ function ListenContent(props: {isStop: boolean}) {
     // クリーンアップ関数を返す
     return unsubscribe
   }, [navigation])
-
-  useEffect(() => {
-    if (routeParams !== undefined) {
-      isStopped.current = !isStopped.current
-      actionListen()
-    }
-  }, [])
+  
+  // 履歴から来た場合の自動再生
+  // useEffect(() => {
+  //   if (routeParams !== undefined) {
+  //     isStopped.current = !isStopped.current
+  //     actionListen()
+  //   }
+  // }, [])
 
   const firstSound = async () => {
     Animated.timing(opacityImg, {
@@ -223,12 +237,23 @@ function ListenContent(props: {isStop: boolean}) {
 
   async function switchListen() {
     isStopped.current = !isStopped.current
-    if (!isStopped.current && loopInterval.current) {
-      actionListen()
-    } else {
-      Speech.stop()
-    }
+    Speech.stop()
+    showModal()
   }
+
+  // ListenScreen（親component）で使用するonOff関数
+  useImperativeHandle(ref, () =>
+  ({
+    async switchFunc() {
+      isStopped.current = !isStopped.current
+      if (!isStopped.current && loopInterval.current) {
+        actionListen()
+      } else {
+        Speech.stop()
+      }
+    }
+  })
+  )
 
   return (
     <TouchableOpacity style={styles.listenContent} onPress={switchListen}>
@@ -262,7 +287,7 @@ function ListenContent(props: {isStop: boolean}) {
       </ImageBackground>
     </TouchableOpacity>
   )
-}
+})
 
 export default ListenContent
 

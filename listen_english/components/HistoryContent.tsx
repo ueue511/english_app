@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native'
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native'
 
 type Props = {
   jp: string,

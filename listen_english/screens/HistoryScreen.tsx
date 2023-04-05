@@ -13,6 +13,9 @@ import HistoryContent from '../components/HistoryContent'
 import NaveTabu from '../components/module/NaveTabu'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+import { ListItem } from '@rneui/themed'
+
+
 import { ENGLISH_DATA } from '../constants'
 
 type EnglishData = {
