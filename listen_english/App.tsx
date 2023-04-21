@@ -1,20 +1,25 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react'
+import { NavigationContainer } from '@react-navigation/native'
+import { createStackNavigator } from '@react-navigation/stack'
 
-export default function App() {
+import TopScreen from './screens/TopScreen'
+import ListenScreen from './screens/ListenScreen'
+import HistoryScreen from './screens/HistoryScreen'
+import DeleteHistoryScreen from './screens/DeleteHistoryScreen'
+
+const Stack = createStackNavigator()
+
+function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+    <NavigationContainer>
+      <Stack.Navigator>
+        <Stack.Screen options={{ headerShown: false }} name='top' component={TopScreen} />
+        <Stack.Screen options={{ headerShown: false }} name='listen' component={ListenScreen} />
+        <Stack.Screen options={{ headerShown: false }} name='history' component={HistoryScreen} />
+        <Stack.Screen options={{ headerShown: false }} name='deleteHistory' component={DeleteHistoryScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+export default App
