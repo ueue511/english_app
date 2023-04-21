@@ -10,7 +10,10 @@ interface Props {
   stroke: number,
   color: string,
   text: string
-  buttonStyle?: {},
+  buttonStyle?: {
+    fontSize?: number,
+    letterSpacing?: number
+  },
   route: () => void
 }
 

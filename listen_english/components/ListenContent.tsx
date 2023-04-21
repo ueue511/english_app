@@ -268,7 +268,7 @@ const ListenContent = forwardRef<ListenContentMethods, ListenContentProps>(({ sh
           style={styles.textBox}
         >
           <Animated.View style={{ opacity: opacity }}>
-            <Text style={styles.text}>
+            <Text style={styles.text} adjustsFontSizeToFit>
               {jpLanguage}
             </Text>
           </Animated.View>
@@ -280,7 +280,7 @@ const ListenContent = forwardRef<ListenContentMethods, ListenContentProps>(({ sh
         style={styles.textBox}
       >
         <Animated.View style={{ opacity: opacityAnswer }}>
-          <Text style={styles.text}>
+          <Text style={styles.text} adjustsFontSizeToFit>
             {enLanguage}
           </Text>
         </Animated.View>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     marginTop: 20
   },
   text: {
-    fontSize: 42,
+    fontSize: 38,
     fontWeight: 'bold',
     textAlign: 'center'
   },
